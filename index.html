@@ -99,11 +99,16 @@
 
     <script>
         // State management
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const yearMonth = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+
         let transactions = JSON.parse(localStorage.getItem('transactions')) || [
-            { id: 1, date: '2026-02-01', description: 'Monthly Salary', category: 'Income', amount: 5000.00 },
-            { id: 2, date: '2026-02-02', description: 'Apartment Rent', category: 'Rent', amount: -1500.00 },
-            { id: 3, date: '2026-02-03', description: 'Grocery Store', category: 'Food', amount: -200.00 },
-            { id: 4, date: '2026-02-05', description: 'Internet Bill', category: 'Utilities', amount: -60.00 }
+            { id: 1, date: `${yearMonth}-01`, description: 'Monthly Salary', category: 'Income', amount: 5000.00 },
+            { id: 2, date: `${yearMonth}-02`, description: 'Apartment Rent', category: 'Rent', amount: -1500.00 },
+            { id: 3, date: `${yearMonth}-03`, description: 'Grocery Store', category: 'Food', amount: -200.00 },
+            { id: 4, date: `${yearMonth}-05`, description: 'Internet Bill', category: 'Utilities', amount: -60.00 }
         ];
 
         // Elements
@@ -184,7 +189,10 @@
 
                 const catTd = document.createElement('td');
                 catTd.className = 'p-3 text-sm';
-                catTd.innerHTML = `<span class="px-2 py-1 rounded-full text-xs ${t.category === 'Income' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${t.category}</span>`;
+                const catSpan = document.createElement('span');
+                catSpan.className = `px-2 py-1 rounded-full text-xs ${t.category === 'Income' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`;
+                catSpan.textContent = t.category;
+                catTd.appendChild(catSpan);
 
                 const amountTd = document.createElement('td');
                 amountTd.className = `p-3 text-sm text-right font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}`;
@@ -208,15 +216,12 @@
             });
 
             // Update Metrics (Monthly totals based on current year/month)
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-
             const totalBalance = transactions.reduce((acc, t) => acc + t.amount, 0);
 
             const monthlyTransactions = transactions.filter(t => {
-                const tDate = new Date(t.date);
-                return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+                // Parse date string manually to avoid timezone issues
+                const [year, month] = t.date.split('-').map(Number);
+                return (month - 1) === currentMonth && year === currentYear;
             });
 
             const monthlyIncome = monthlyTransactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
