@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Personal Finance Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <header class="bg-white shadow p-4 mb-6">
+        <h1 class="text-2xl font-bold text-center">Smart Personal Finance Tracker</h1>
+    </header>
+
+    <main class="px-4 max-w-7xl mx-auto">
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h2 class="text-xl font-semibold mb-2">Total Balance</h2>
+                <p id="totalBalance" class="text-3xl font-bold text-green-600">$0.00</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h2 class="text-xl font-semibold mb-2">Monthly Income</h2>
+                <p id="monthlyIncome" class="text-3xl font-bold text-blue-500">$0.00</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h2 class="text-xl font-semibold mb-2">Monthly Expenses</h2>
+                <p id="monthlyExpenses" class="text-3xl font-bold text-red-500">$0.00</p>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h2 class="text-xl font-semibold mb-2">Savings Rate</h2>
+                <p id="savingsRate" class="text-3xl font-bold text-purple-500">0%</p>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h2 class="text-lg font-semibold mb-4">Cash Flow Overview</h2>
+                <canvas id="cashFlowChart"></canvas>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow">
+                <h2 class="text-lg font-semibold mb-4">Spending by Category</h2>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-2xl shadow mb-6">
+            <h2 class="text-xl font-semibold mb-4">Add New Transaction</h2>
+            <form id="transactionForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="date" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" id="description" placeholder="e.g. Salary, Groceries" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Category</label>
+                    <select id="category" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
+                        <option value="Income">Income</option>
+                        <option value="Food">Food</option>
+                        <option value="Rent">Rent</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Transport">Transport</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Amount</label>
+                    <input type="number" id="amount" step="0.01" placeholder="0.00" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 border">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Add</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="bg-white p-6 rounded-2xl shadow mb-6">
+            <h2 class="text-xl font-semibold mb-4">Recent Transactions</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="text-left p-3">Date</th>
+                            <th class="text-left p-3">Description</th>
+                            <th class="text-left p-3">Category</th>
+                            <th class="text-right p-3">Amount</th>
+                            <th class="text-center p-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionList">
+                        <!-- Transactions will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // State management
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [
+            { id: 1, date: '2026-02-01', description: 'Monthly Salary', category: 'Income', amount: 5000.00 },
+            { id: 2, date: '2026-02-02', description: 'Apartment Rent', category: 'Rent', amount: -1500.00 },
+            { id: 3, date: '2026-02-03', description: 'Grocery Store', category: 'Food', amount: -200.00 },
+            { id: 4, date: '2026-02-05', description: 'Internet Bill', category: 'Utilities', amount: -60.00 }
+        ];
+
+        // Elements
+        const transactionForm = document.getElementById('transactionForm');
+        const transactionList = document.getElementById('transactionList');
+        const totalBalanceEl = document.getElementById('totalBalance');
+        const monthlyIncomeEl = document.getElementById('monthlyIncome');
+        const monthlyExpensesEl = document.getElementById('monthlyExpenses');
+        const savingsRateEl = document.getElementById('savingsRate');
+
+        // Initialize Charts
+        let cashFlowChart, categoryChart;
+
+        function initCharts() {
+            const cashFlowCtx = document.getElementById('cashFlowChart').getContext('2d');
+            cashFlowChart = new Chart(cashFlowCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Balance History',
+                        data: [],
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.6)',
+                            'rgba(245, 158, 11, 0.6)',
+                            'rgba(59, 130, 246, 0.6)',
+                            'rgba(16, 185, 129, 0.6)',
+                            'rgba(139, 92, 246, 0.6)',
+                            'rgba(107, 114, 128, 0.6)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            });
+        }
+
+        function updateUI() {
+            // Update table
+            transactionList.innerHTML = '';
+            transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+
+                // Use DOM methods to prevent XSS
+                const dateTd = document.createElement('td');
+                dateTd.className = 'p-3 text-sm';
+                dateTd.textContent = t.date;
+
+                const descTd = document.createElement('td');
+                descTd.className = 'p-3 text-sm';
+                descTd.textContent = t.description;
+
+                const catTd = document.createElement('td');
+                catTd.className = 'p-3 text-sm';
+                catTd.innerHTML = `<span class="px-2 py-1 rounded-full text-xs ${t.category === 'Income' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">${t.category}</span>`;
+
+                const amountTd = document.createElement('td');
+                amountTd.className = `p-3 text-sm text-right font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}`;
+                amountTd.textContent = (t.amount >= 0 ? '+' : '') + t.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+                const actionTd = document.createElement('td');
+                actionTd.className = 'p-3 text-sm text-center';
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.className = 'text-red-500 hover:text-red-700';
+                deleteBtn.onclick = () => deleteTransaction(t.id);
+                actionTd.appendChild(deleteBtn);
+
+                row.appendChild(dateTd);
+                row.appendChild(descTd);
+                row.appendChild(catTd);
+                row.appendChild(amountTd);
+                row.appendChild(actionTd);
+
+                transactionList.appendChild(row);
+            });
+
+            // Update Metrics (Monthly totals based on current year/month)
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const totalBalance = transactions.reduce((acc, t) => acc + t.amount, 0);
+
+            const monthlyTransactions = transactions.filter(t => {
+                const tDate = new Date(t.date);
+                return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+            });
+
+            const monthlyIncome = monthlyTransactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
+            const monthlyExpenses = Math.abs(monthlyTransactions.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0));
+            const savingsRate = monthlyIncome > 0 ? ((monthlyIncome - monthlyExpenses) / monthlyIncome * 100) : 0;
+
+            totalBalanceEl.innerText = totalBalance.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            monthlyIncomeEl.innerText = monthlyIncome.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            monthlyExpensesEl.innerText = monthlyExpenses.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            savingsRateEl.innerText = `${Math.max(0, savingsRate).toFixed(1)}%`;
+
+            updateCharts();
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        function updateCharts() {
+            // Update Cash Flow Chart (Balance history, aggregated by date)
+            const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Group by date
+            const byDate = {};
+            sorted.forEach(t => {
+                byDate[t.date] = (byDate[t.date] || 0) + t.amount;
+            });
+
+            let runningBalance = 0;
+            const history = Object.keys(byDate).sort().map(date => {
+                runningBalance += byDate[date];
+                return { date, balance: runningBalance };
+            });
+
+            cashFlowChart.data.labels = history.map(h => h.date);
+            cashFlowChart.data.datasets[0].data = history.map(h => h.balance);
+            cashFlowChart.update();
+
+            // Update Category Chart (Expenses only)
+            const expenseByCat = {};
+            transactions.filter(t => t.amount < 0).forEach(t => {
+                expenseByCat[t.category] = (expenseByCat[t.category] || 0) + Math.abs(t.amount);
+            });
+
+            categoryChart.data.labels = Object.keys(expenseByCat);
+            categoryChart.data.datasets[0].data = Object.values(expenseByCat);
+            categoryChart.update();
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            updateUI();
+        }
+
+        transactionForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+
+            const newTransaction = {
+                id: Date.now(),
+                date: document.getElementById('date').value,
+                description: document.getElementById('description').value,
+                category: category,
+                amount: category === 'Income' ? Math.abs(amount) : -Math.abs(amount)
+            };
+
+            transactions.push(newTransaction);
+            updateUI();
+            transactionForm.reset();
+        });
+
+        // Start App
+        initCharts();
+        updateUI();
+    </script>
+</body>
+</html>
